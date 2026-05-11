@@ -50,3 +50,5 @@ with col2:
     st.write("") 
     if st.button("Hemen Taramaya Başla ➔", type="primary", use_container_width=True):
         st.switch_page("pages/analiz.py")
+
+#son guncelleme 11 mayis 2024
