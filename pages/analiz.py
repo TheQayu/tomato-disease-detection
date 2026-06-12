@@ -1,4 +1,3 @@
-
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -19,21 +18,6 @@ if "file_uploader_key" not in st.session_state:
 @st.cache_resource
 def Mehmet_load_model():
     try:
-
-
-# 1. Sayfa Ayarları
-st.set_page_config(page_title="Analiz Laboratuvarı", layout="wide", initial_sidebar_state="collapsed")
-
-# --- DOSYA YÜKLEYİCİ SIFIRLAMA ANAHTARI ---
-if "file_uploader_key" not in st.session_state:
-    st.session_state.file_uploader_key = 0
-
-# --- YAPAY ZEKA MODELİNİ YÜKLEME ---
-def Mehmet_load_model():
-    try:
-        # 20k+ veri seti ile eğitilmiş ana üretim modeli
-
-        
         return tf.keras.models.load_model("tomato_v4_final.keras")
     except Exception as e:
         st.error("Sistem Hatası: CNN teşhis modeli bulunamadı. Lütfen 'tomato_v4_final.keras' dosyasını kontrol edin.")
@@ -96,7 +80,6 @@ def tta_tahmin(model, image):
     img_array = np.array(img, dtype=np.float32)
 
     tahminler = []
-
     tahminler.append(model.predict(np.expand_dims(img_array, 0), verbose=0)[0])
 
     flipped = np.fliplr(img_array)
@@ -183,91 +166,6 @@ def show_results_dialog(image):
         st.error("❌ Excel oluşturma modülü eksik. Lütfen sisteme 'openpyxl' kütüphanesini kurun.")
     except Exception as e:
         st.error("❌ Rapor oluşturulurken beklenmeyen bir hata oluştu.")
-
-
-    # 1. Orijinal Tahmin
-    tahminler.append(model.predict(np.expand_dims(img_array, 0), verbose=0)[0])
-
-    # 2. Çevrilmiş (Flipped)
-    flipped = np.fliplr(img_array)
-    tahminler.append(model.predict(np.expand_dims(flipped, 0), verbose=0)[0])
-
-    # 3. Parlaklık Artırılmış
-    img_bright = np.clip(img_array * 1.2, 0, 255)
-    tahminler.append(model.predict(np.expand_dims(img_bright, 0), verbose=0)[0])
-
-    # 4. Parlaklık Azaltılmış
-    img_dark = np.clip(img_array * 0.8, 0, 255)
-    tahminler.append(model.predict(np.expand_dims(img_dark, 0), verbose=0)[0])
-
-    # 5. Kırpılmış (Cropped)
-    h, w = img_array.shape[:2]
-    margin = 20
-    cropped = img_array[margin:h-margin, margin:w-margin]
-    cropped_resized = np.array(Image.fromarray(cropped.astype(np.uint8)).resize((224, 224)), dtype=np.float32)
-    tahminler.append(model.predict(np.expand_dims(cropped_resized, 0), verbose=0)[0])
-
-    return np.mean(tahminler, axis=0)
-
-# --- POP-UP (DIALOG) FONKSİYONU ---
-@st.dialog("🔬 Analiz Sonuçları Raporu", width="large")
-def show_results_dialog(image):
-    with st.spinner("Yapay Zeka (CNN) hastalığı analiz ediyor..."):
-        try:
-            tahminler = tta_tahmin(cnn_model, image)
-            en_yuksek_indeks = np.argmax(tahminler)
-            teshis = class_labels[en_yuksek_indeks]
-            guven_skoru = tahminler[en_yuksek_indeks] * 100
-        except Exception as e:
-            st.error("⚠️ Analiz motoru bu görseli işlerken bir sorun yaşadı.")
-            if st.button("Pencereyi Kapat", use_container_width=True):
-                st.rerun()
-            return 
-
-    st.markdown("#### 📊 Teşhis Olasılık Dağılımı")
-    
-    chart_data = pd.DataFrame(
-        {"Olasılık (%)": tahminler * 100},
-        index=class_labels
-    )
-    
-    st.bar_chart(chart_data, color="#e11d48")
-    st.success(f"🎯 **Kesin Teşhis:** {teshis} \n\n **Güven Skoru:** %{guven_skoru:.2f}")
-    st.divider()
-    
-    # --- EXCEL OLUŞTURMA VE İNDİRME KISMI ---
-    try:
-        df_indir = pd.DataFrame({
-            "Hastalık Sınıfı": class_labels,
-            "Tahmin Olasılığı (%)": np.round(tahminler * 100, 2)
-        })
-        
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df_indir.to_excel(writer, index=False, sheet_name='Analiz Sonuçları')
-            worksheet = writer.sheets['Analiz Sonuçları']
-            worksheet.column_dimensions['A'].width = 35  
-            worksheet.column_dimensions['B'].width = 20  
-
-        excel_data = buffer.getvalue()
-        
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            st.download_button(
-                label="📥 Sonuçları Excel Olarak İndir",
-                data=excel_data,
-                file_name="domates_analiz_raporu.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        with col_btn2:
-            if st.button("Pencereyi Kapat", use_container_width=True):
-                st.rerun()
-    except ImportError:
-        st.error("❌ Excel oluşturma modülü eksik. Lütfen sisteme 'openpyxl' kütüphanesini kurun.")
-    except Exception as e:
-        st.error("❌ Rapor oluşturulurken beklenmeyen bir hata oluştu.")
-
 
 # 2. Ortak Tasarım Dili (CSS)
 st.markdown("""
@@ -378,9 +276,6 @@ with col_result:
                     col_m1.metric(label="Model Giriş Boyutu", value="224x224")
                     col_m2.metric(label="Renk Kanalları", value="3 (RGB)")
                     
-
-                
-
             except Exception:
                 st.warning("Görsel önizlemesi yüklenemedi.")
         else:
@@ -388,6 +283,3 @@ with col_result:
             st.write("")
             st.write("Veri bekleniyor...")
             st.progress(0)
-
-
-
