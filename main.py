@@ -1,4 +1,4 @@
-import streamlit as st
+
 
 # 1. Sayfa Ayarları
 st.set_page_config(page_title="Agri-AI | Domates Teşhis", layout="wide", initial_sidebar_state="collapsed")
@@ -50,4 +50,8 @@ with col2:
         if st.button("Hemen Taramaya Başla ➔", type="primary", use_container_width=True):
             st.switch_page("pages/analiz.py")
     except Exception as e:
+
         st.error("Sayfa yönlendirmesi sırasında bir hata oluştu. Lütfen 'pages/analiz.py' dosyasının var olduğundan emin olun.")
+
+        st.error("Sayfa yönlendirmesi sırasında bir hata oluştu. Lütfen 'pages/analiz.py' dosyasının var olduğundan emin olun.")
+
