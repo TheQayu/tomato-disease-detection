@@ -1,4 +1,4 @@
-
+import streamlit as st
 
 # 1. Sayfa Ayarları
 st.set_page_config(page_title="Agri-AI | Domates Teşhis", layout="wide", initial_sidebar_state="collapsed")
