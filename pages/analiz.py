@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import io
+import torch
+from transformers import CLIPProcessor, CLIPModel
 
 # 1. Sayfa Ayarları
 st.set_page_config(page_title="Analiz Laboratuvarı", layout="wide", initial_sidebar_state="collapsed")
@@ -37,7 +39,42 @@ def Mehmet_load_model():
         st.error("Sistem Hatası: CNN teşhis modeli bulunamadı. Lütfen 'tomato_v4_final.keras' dosyasını kontrol edin.")
         st.stop()
 
+@st.cache_resource
+def load_clip():
+    try:
+        clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        return clip_model, clip_processor
+    except Exception as e:
+        st.warning("CLIP modeli yüklenemedi. Doğrulama atlanacak.")
+        return None, None
+
 cnn_model = Mehmet_load_model()
+clip_model, clip_processor = load_clip()
+
+# --- YAPRAK DOĞRULAMA FONKSİYONU (CLIP) ---
+def yaprak_kontrol(image):
+    if clip_model is None or clip_processor is None:
+        return 1.0  # Eğer CLIP yüklenemezse sistem çökmesin diye testten geçiriyoruz
+    
+    metinler = [
+        "a tomato plant leaf, healthy or diseased",
+        "anything that is not a plant leaf, such as a car, person, food, building, animal or object"
+    ]
+    
+    try:
+        inputs = clip_processor(
+            text=metinler,
+            images=image,
+            return_tensors="pt",
+            padding=True
+        )
+        with torch.no_grad():
+            outputs = clip_model(**inputs)
+        probs = outputs.logits_per_image.softmax(dim=1)[0]
+        return probs[0].item()  # Yaprak olma ihtimali (0-1 arası)
+    except Exception as e:
+        return 1.0 
 
 # --- HASTALIK SINIFLARI ---
 class_labels = [
@@ -94,7 +131,7 @@ def show_results_dialog(image):
                 st.rerun()
             return 
 
-    # CNN Güvenlik filtresi (Görsel çok bulanıksa veya alakasızsa)
+    # CNN ikinci güvenlik filtresi (CLIP'ten geçse bile görsel çok bulanıksa)
     if guven_skoru < 60.0:
         st.error("⚠️ HATA: Analiz yapılamayacak kadar düşük güven skoru.")
         st.info("Fotoğraf çok bulanık veya hastalık belirtileri net değil. Lütfen uygun bir görsel ile tekrar deneyin.")
@@ -269,7 +306,8 @@ with col_back:
 st.markdown('<h2 style="font-weight: 700; margin-top: -10px;">🌿 Yaprak Analiz Laboratuvarı</h2>', unsafe_allow_html=True)
 st.divider()
 
-# 4. Modern Kart Tasarımı
+# 4. Modern Kart Tasarımı (Değişkenler için ön tanımlama)
+yaprak_skoru = 1.0
 image = None
 
 col_upload, col_result = st.columns([1, 1], gap="large")
@@ -295,6 +333,10 @@ with col_upload:
                 image.verify() 
                 image = Image.open(uploaded_file) 
                 
+                # --- CLIP İLE DOĞRULAMA ---
+                with st.spinner("Görsel doğrulanıyor (CLIP)..."):
+                    yaprak_skoru = yaprak_kontrol(image)
+                
                 st.write("") 
                 col_btn1, col_btn2 = st.columns(2)
                 
@@ -304,12 +346,12 @@ with col_upload:
                         st.rerun()
                         
                 with col_btn2:
-
-
-                    # Model entegre edildiği için buton aktif
-
-                    if st.button("Sonuçları Göster 📊", type="primary", use_container_width=True):
-                        show_results_dialog(image)
+                    # Sadece yaprak skoru %55'in üzerindeyse butona tıklanabilir
+                    if yaprak_skoru >= 0.55:
+                        if st.button("Sonuçları Göster 📊", type="primary", use_container_width=True):
+                            show_results_dialog(image)
+                    else:
+                        st.button("Sonuçları Göster 📊", type="primary", disabled=True, use_container_width=True)
                         
             except Exception as e:
                 st.error("❌ Hata: Yüklenen dosya okunamadı. Lütfen geçerli bir görsel dosyası yükleyin.")
@@ -324,17 +366,17 @@ with col_result:
         if uploaded_file is not None and image is not None:
             try:
                 st.image(image, use_container_width=True)
+                
+                # CLIP Skoruna Göre Sağ Tarafta Bilgi Verme
+                if yaprak_skoru < 0.55:
+                    st.error(f"❌ Bu görsel bir domates yaprağına benzemiyor. \n\n**(Doğruluk Skoru: %{yaprak_skoru*100:.1f})**\n\nLütfen net bir yaprak fotoğrafı yükleyin.")
+                else:
+                    st.success(f"✅ Görüntü doğrulandı (Skor: %{yaprak_skoru*100:.1f}) ve yapay zeka motoruna aktarıldı.")
 
-                st.success("✅ Görüntü algılandı ve yapay zeka motoruna aktarıldı.")
-
-                st.success("✅ Görüntü başarıyla yüklendi ve yapay zeka motoruna aktarılmaya hazır.")
-
-
-                st.markdown("**Sistem Verileri:**")
-                col_m1, col_m2 = st.columns(2)
-                col_m1.metric(label="Model Giriş Boyutu", value="224x224")
-                col_m2.metric(label="Renk Kanalları", value="3 (RGB)")
-
+                    st.markdown("**Sistem Verileri:**")
+                    col_m1, col_m2 = st.columns(2)
+                    col_m1.metric(label="Model Giriş Boyutu", value="224x224")
+                    col_m2.metric(label="Renk Kanalları", value="3 (RGB)")
                     
 
                 
