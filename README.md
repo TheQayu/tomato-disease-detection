@@ -1,4 +1,4 @@
-readme_content = """# 🌿 Domates Yaprağı Hastalık Teşhis Sistemi (Agri-AI)
+## 🌿Domates Yaprağı Hastalık Teşhis Sistemi (Agri-AI)
 
 Bu proje, **Bursa Uludağ Üniversitesi Mühendislik Fakültesi Bilgisayar Mühendisliği Bölümü** bünyesinde yürütülen *Python Programlamaya Giriş Dersi (2026)* kapsamında gerçekleştirilen Final Projesidir.
 
